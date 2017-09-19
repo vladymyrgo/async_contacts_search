@@ -8,6 +8,6 @@ Requirements (requirements.txt):
 
 ### Crawler example:
 ```
-cs = ContacsSearch(sites=['http://studioelephant.com.ua/', ], workers=10, csv_file_name='contacts.csv')
+cs = ContacsSearch(sites=['http://the-site.com/', ], workers=10, csv_file_name='contacts.csv')
 cs.start()
 ```
