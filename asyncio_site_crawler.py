@@ -9,6 +9,7 @@ from concurrent.futures import FIRST_COMPLETED
 class Crawler():
     """root_url - (Str) Site url
     workerts - (Int) Amount of async workers. Default is 10
+    parse_pages_limit - (Int) limit of pages for parser. Default is 100
     page_handler - is a function to handle each page of the site.
     Must have two atrs: (url, dom)
     Example:
@@ -22,8 +23,12 @@ class Crawler():
     ```
     """
 
-    def __init__(self, root_url, workers=10, page_handler=None):
+    def __init__(self, root_url, workers=10, parse_pages_limit=100, page_handler=None):
         self.workers = workers
+        self.parse_pages_limit = parse_pages_limit
+        self.parse_pages_counter = 0
+        self.prioritized_key_words = ['contact', 'hello', 'info', 'team', 'job',
+                                      'carers', 'about-us', 'aboutus']
         self.page_handler = page_handler
         self.root_url = root_url
         self.crawled_urls = set()
@@ -46,7 +51,9 @@ class Crawler():
 
                 if self.page_handler:
                     is_contacs_saved = self.page_handler(queue_url, self.root_url, body)
-                    if is_contacs_saved:
+                    self.parse_pages_counter += 1
+
+                    if is_contacs_saved or self.is_parse_page_limit_reached():
                         break
 
                 self.add_new_urls_to_queue(dom=dom)
@@ -55,6 +62,8 @@ class Crawler():
                 break
 
     def add_new_urls_to_queue(self, dom):
+        new_urls_prioritized = []
+        new_urls_common = []
         dom.make_links_absolute(self.root_url)
         for l in dom.iterlinks():
             newurl = l[2]
@@ -62,7 +71,16 @@ class Crawler():
                 if '#' in newurl:
                     newurl = newurl[:newurl.find('#')]
                 self.founded_urls.update([newurl])
-                self.queue.put_nowait(newurl)
+                for key_word in self.prioritized_key_words:
+                    if key_word in newurl:
+                        new_urls_prioritized.append(newurl)  # add url to prioritized list
+                        break
+                if newurl not in new_urls_prioritized:  # if url was not added to prioritized list
+                    new_urls_common.append(newurl)  # add url to common list
+
+        new_urls = new_urls_prioritized + new_urls_common
+        for url in new_urls:
+            self.queue.put_nowait(url)
 
     def is_valid(self, url):
             if '#' in url:
@@ -76,6 +94,12 @@ class Crawler():
             if re.search(self.regex, url):
                 return False
             return True
+
+    def is_parse_page_limit_reached(self):
+        if self.parse_pages_counter >= self.parse_pages_limit:
+            return True
+        else:
+            return False
 
     def crawl(self):
         self.regex = re.compile(self.allowed_regex)

@@ -4,12 +4,18 @@ from asyncio_site_crawler import Crawler
 
 
 class ContacsSearch():
+    """sites - (List) List of urls
+    workerts - (Int) Amount of async workers. Default is 10
+    parse_pages_limit - (Int) limit of pages for parser. Default is 100
+    csv_file_name - (Str) name of csv file. Default is "contacts.csv"
+    """
 
-    def __init__(self, sites, workers=10, csv_file_name='contacts.csv'):
+    def __init__(self, sites, workers=10, parse_pages_limit=100, csv_file_name='contacts.csv'):
         self.sites = sites
         self.sites_contacts = {}  # {'http://site.com': {'e@mail.com', 'i@mail.com'}}
         self.workers = workers
-        self.csv_file_name
+        self.parse_pages_limit = parse_pages_limit
+        self.csv_file_name = csv_file_name
 
     def page_handler(self, page_url, root_url, html):
         # find contacs
@@ -36,12 +42,9 @@ class ContacsSearch():
             crawler = Crawler(
                 site,
                 workers=self.workers,
+                parse_pages_limit=self.parse_pages_limit,
                 page_handler=self.page_handler)
 
             crawler.crawl()
 
         self.save_to_csv()
-
-
-cs = ContacsSearch(sites=['http://studioelephant.com.ua/', ], workers=10)
-cs.start()
