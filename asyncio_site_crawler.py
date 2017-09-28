@@ -25,10 +25,11 @@ class Crawler():
 
     def __init__(self, root_url, workers=10, parse_pages_limit=100, page_handler=None):
         self.workers = workers
+        self.timeout = 5
         self.parse_pages_limit = parse_pages_limit
         self.parse_pages_counter = 0
         self.prioritized_key_words = ['contact', 'hello', 'info', 'team', 'job',
-                                      'carers', 'about-us', 'aboutus']
+                                      'carers', 'about', 'about-us', 'aboutus']
         self.page_handler = page_handler
         self.root_url = root_url
         self.crawled_urls = set()
@@ -44,8 +45,12 @@ class Crawler():
         while True:
             queue_url = yield from self.queue.get()
             self.crawled_urls.update([queue_url])
-            response = yield from aiohttp.request('GET', queue_url)
-            if response.status == 200:
+            try:
+                response = yield from asyncio.shield(asyncio.wait_for(aiohttp.request('GET', queue_url), self.timeout))
+            except asyncio.TimeoutError:
+                response = None
+
+            if response and response.status == 200:
                 body = yield from response.text()
                 dom = fromstring(body)
 

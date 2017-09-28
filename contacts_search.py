@@ -16,29 +16,49 @@ class ContacsSearch():
         self.workers = workers
         self.parse_pages_limit = parse_pages_limit
         self.csv_file_name = csv_file_name
+        self.exclude_ext = ['png', 'img', 'jpg', 'jpeg', 'gif', 'ico', 'txt', 'html']
+
+    def not_img(self, element):
+        for ext in self.exclude_ext:
+            ext = '.' + ext
+            if ext in element:
+                return False
+        return True
 
     def page_handler(self, page_url, root_url, html):
-        # find contacs
-        p_mails = re.compile(r"""[^\s@<>"'`]+@[^\s@<>"'`]+\.[^\s@<>"'`]+""", re.MULTILINE | re.IGNORECASE)
+        """return True to finish parse the site
+        """
+        # find contacts
+        regex_excluede_ext = '|'.join(self.exclude_ext)
+        regex_str = r"""[^\s@<>"'`:;|\/\\&,?]+@[^\s@<>"'`:;|\/\\&,?]+\.(?!{})[^\s@<>"'`:;|\/\\&,?]+""".format(regex_excluede_ext)
+        p_mails = re.compile(regex_str, re.MULTILINE | re.IGNORECASE)
         mails = re.findall(p_mails, html)
+        mails = filter(self.not_img, mails)
+        mails = set(mails)
         if mails:
-            self.sites_contacts[root_url] = set(mails)
-            return True  # to close Crawler on this site
+            contacts = self.sites_contacts.get(root_url)
+            if contacts:
+                contacts.update(mails)
+            else:
+                self.sites_contacts[root_url] = mails
+            # return True  # to close Crawler on this site
 
         return False  # to continue parse this site
 
     def save_to_csv(self):
-        with open(self.csv_file_name, 'w') as csvfile:
-            fieldnames = ['site', 'mails']
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        if self.sites_contacts:
+            with open(self.csv_file_name, 'w') as csvfile:
+                fieldnames = ['site', 'mails']
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
-            writer.writeheader()
-            for site, mails in self.sites_contacts.items():
-                str_mails = '|'.join(mails)
-                writer.writerow({'site': site, 'mails': str_mails})
+                writer.writeheader()
+                for site, mails in self.sites_contacts.items():
+                    str_mails = '|'.join(mails)
+                    writer.writerow({'site': site, 'mails': str_mails})
 
     def start(self):
         for site in self.sites:
+            print("THE SITE IS:", site)
             crawler = Crawler(
                 site,
                 workers=self.workers,
