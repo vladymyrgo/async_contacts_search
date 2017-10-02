@@ -93,16 +93,3 @@ class CSVContactsReader():
         self.read_contacts()
         self.clean_contacts()
         return self.cleaned_contacts
-
-
-# p = CSVContactsReader('contacts_csv/02_10_17/contacts_total.csv')
-# p.read_contacts()
-# cs = p.get_clean_contacts()
-# print(cs)
-
-# total_mails_counter = 0
-# for c in cs.values():
-#     # print(list(c))
-#     total_mails_counter += len(c)
-# # print(cs['http://www.socialplex.com/'])
-# print(total_mails_counter)
